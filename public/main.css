@@ -1,0 +1,33 @@
+* {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  }
+  
+#song-title::before,
+#song-title::after {
+  content: '"';
+}
+
+progress {
+  appearance: none;
+  background-image: url('/assets/images/mask.png');
+  background-color: transparent;
+  background-size: contain;
+  background-repeat: no-repeat;
+  width: 360px;
+  height: 3em;
+}
+
+/* TODO: Fix this on Webkit/Blink & make not hardcoded */
+progress::-moz-progress-bar {
+  background-image: url('/assets/images/6638b0bc-b049-4399-96b0-a728e6e63761.png');
+  background-color: transparent;
+  background-size: 360px 100%;
+  background-position: 0px -2px;
+  background-repeat: no-repeat;
+}
+
+p {
+  color: white;
+}
