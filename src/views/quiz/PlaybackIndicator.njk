@@ -1,0 +1,7 @@
+<div id="playback-indicator" class="bg-brand-card rounded-lg mt-4 p-4 relative" x-data="playback"
+    x-on:click="create('{{ audio_url }}')">
+    <label for="waveform" class="text-gray-400 absolute bottom-2">
+        <span x-text="asTimestamp(playbackTime)"></span> / <span x-text="asTimestamp(duration)"></span>
+    </label>
+    <progress id="waveform" x-bind:max="duration" x-bind:value="playbackTime"></progress>
+</div>

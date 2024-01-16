@@ -7,8 +7,10 @@ import nunjucks from 'nunjucks'
 const waypoint = new Elysia();
 waypoint.use(html());
 waypoint.use(staticPlugin({
-    prefix: "/"
+    prefix: "/",
+    alwaysStatic: true
 }))
+
 
 nunjucks.configure('src/views/', { autoescape: true });
 
@@ -30,7 +32,11 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
     }
 
     return (
-        nunjucks.render("QuizView.njk", { question: "chat, what is this?" })
+        nunjucks.render("QuizView.njk", { sessionData: {
+            elapsedTime: 0,
+            title: "Very cool quiz",
+            playerCount: 0
+         }, question: "chat, what is this?", audio_url: "assets/audio/Le-Souvenir-avec-le-crepuscule.flac" })
     )
 }, {
     cookie: t.Cookie({
@@ -154,18 +160,32 @@ const songListExample: songMeta[] = [
         songTitle: 'Le Souvenir avec le crepuscule',
         albumTitle: 'Fountain of Belleau',
         coverArt: '/assets/images/covers/cover.jpg',
-        audioUrl: '/assets/audio/Le Souvenir avec le crepuscule.flac'
+        audioUrl: '/assets/audio/Le-Souvenir-avec-le-crepuscule.flac'
     }
 ]
 
+type quizMeta = {
+    name: string,
+    creator: string,
+    createTime: number
+}
+
 class Quiz {
     private songList: songMeta[];
-    private createTime: number;
+    private quizMetadata: quizMeta;
 
     constructor(songList: songMeta[]) {
         // TODO: load quiz data
         this.songList = songList
-        this.createTime = new Date().valueOf();
+        this.quizMetadata = {
+            name: "very cool quiz 1",
+            creator: "bill gates",
+            createTime: new Date().valueOf()
+        }
+    }
+
+    get data() {
+        return this.quizMetadata;
     }
 
     /*getSong(index: number) {
@@ -178,10 +198,6 @@ class Quiz {
 
     get songs() {
         return this.songList;
-    }
-
-    get creationTime() {
-        return this.createTime;
     }
 
 }

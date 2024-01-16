@@ -4,10 +4,10 @@
 <div class="max-w-[50em] sm:mx-auto my-20 mx-4" hx-ext="ws" ws-connect="/ws">
   <div class="my-4">
     <p id="room-uuid">uuid</p>
-    <h1 class="font-black text-white text-4xl my-3 uppercase">{{ quizMetadata.title }}</h1>
+    <h1 class="font-black text-white text-4xl my-3 uppercase">{{ sessionData.title }}</h1>
     <p class="font-black text-gray-500 text-lg">
-      <span id="quiz-time">{{ quizMetadata.elapsedTime }}</span> -
-      <span id="player-count">{{ quizMetadata.playerCount }}</span> players
+      <span id="quiz-time">{{ sessionData.elapsedTime }}</span> -
+      <span id="player-count">{{ sessionData.playerCount }}</span> players
     </p>
   </div>
   <div class="grid sm:grid-cols-2 gap-4">
@@ -22,4 +22,5 @@
     </div>
   </div>
 </div>
+<script src="/assets/js/AudioPlayer.js" defer></script>
 {% endblock %}
