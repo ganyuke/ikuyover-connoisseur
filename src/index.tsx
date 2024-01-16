@@ -1,36 +1,25 @@
 import { Elysia, t } from 'elysia'
 import { html } from '@elysiajs/html'
-import HomePage from './views/Home';
-import PageNotFound from './views/PageNotFound';
 import staticPlugin from '@elysiajs/static';
-import QuizView from './views/QuizView';
 import type { songMeta } from './utilityFunctions';
-import SongInformation from './views/quiz/SongInformation';
-import CoverArt from './views/quiz/CoverArt';
-import SolveStatus from './views/quiz/SolveStatus';
+import nunjucks from 'nunjucks'
 
 const waypoint = new Elysia();
-
 waypoint.use(html());
 waypoint.use(staticPlugin({
     prefix: "/"
 }))
 
-waypoint.onError(({ code, set }) => {
+nunjucks.configure('src/views/', { autoescape: true });
+
+waypoint.onError(async ({ code, set }) => {
     switch (code) {
         case "NOT_FOUND":
             set.headers["content-type"] = 'text/html; charset=utf8';
             return (
-                <PageNotFound />
+                nunjucks.render("PageNotFound.njk")
             )
     }
-})
-
-waypoint.get("/", () => {
-    const logo = "https://bowenchen.xyz/assets/images/jellyfin-icon.svg";
-    return (
-        <HomePage logo={logo} />
-    )
 })
 
 waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
@@ -41,7 +30,7 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
     }
 
     return (
-        <QuizView />
+        nunjucks.render("QuizView.njk", { question: "chat, what is this?" })
     )
 }, {
     cookie: t.Cookie({
@@ -335,18 +324,18 @@ waypoint.ws('/ws', {
         const room = roomList.findUser(uuid)
 
         if (message.answer === room?.currentSong.songTitle) {
-            ws.send(<>
-                <SongInformation metadata={room.currentSong} />
-                <div id="cover-art" class="from-[#7dcefc] to-[#8dbc85] bg-gradient-to-b rounded-lg p-4">
-                    <CoverArt coverArtUrl={room.currentSong.coverArt} />
-                </div>
-                <SolveStatus solved={true} message='good job' />
-                </>
+            const htmlArray: string[] = [
+                nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentSong }),
+                nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentSong.coverArt }),
+                nunjucks.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
+            ]
+            ws.send(
+                htmlArray.join()
             )
         } else {
-            ws.send(<>
-                <SolveStatus solved={false} message='no idiot' />
-            </>)
+            ws.send(
+                nunjucks.render("quiz/SolveStatus.njk", { solve_status: false, message: 'no idiot' })
+            )
         }
 
         ws.publish('fontaine', 'message')

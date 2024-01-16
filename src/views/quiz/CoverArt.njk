@@ -1,0 +1,7 @@
+{% if coverArtUrl %}
+<img id="cover-art" src={{ coverArtUrl }} class="w-full" />
+{% else %}
+<div id="cover-art" class="w-full aspect-square flex">
+    <p class="text-8xl my-auto mx-auto">?</p>
+</div>
+{% endif %}

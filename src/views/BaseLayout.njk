@@ -1,0 +1,18 @@
+<html lang="en" class="font-sans bg-brand-dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" type="text/css" href="/main.css" />
+    <link rel="stylesheet" type="text/css" href="/uno.css" />
+    <link href="https://cdn.skypack.dev/sanitize.css" rel="stylesheet" />  </head>
+  <body>
+    <div id="app">
+        {% block main %}{% endblock %}
+    </div>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
+  </body>
+</html>
