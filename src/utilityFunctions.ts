@@ -1,17 +1,22 @@
-export const asTimestamp = (time: number) => {
-  const seconds: string = Math.ceil(time % 60)
-    .toString()
-    .padStart(2, '0')
-  const minutes: string = Math.floor(time / 60)
-    .toString()
-    .padStart(2, '0')
-  return `${minutes}:${seconds}`
-}
-
 export type songMeta = {
   albumTitle?: string
   coverArt: string
   artist: string
   songTitle: string
   audioUrl: string
+}
+
+// Work around Elysia's cookie parser throwing
+// NaN for UUIDs starting with numbers.
+const cookiePrefix: string = "brooch_";
+
+export const createUserIdentifer = () => {
+  return cookiePrefix + crypto.randomUUID();
+}
+
+export const isUuid = (uuid: string) => {
+  uuid = uuid.substring(cookiePrefix.length);
+   if (uuid.length !== 36) return false;
+  const matches = uuid.match(/[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}/);
+  return matches ? true : false;
 }
