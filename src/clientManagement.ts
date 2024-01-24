@@ -1,10 +1,10 @@
-import type { songMeta } from "./utilityFunctions";
+import type { Quiz } from "./quizManagement";
 
 export class ClientList {
     private clients: Client[];
 
     constructor() {
-        this.clients = []
+        this.clients = [];
     }
 
     /**
@@ -15,6 +15,11 @@ export class ClientList {
     exists(uuid: string) {
         const clientArr = this.clients.map((client) => client.uuid);
         return clientArr.includes(uuid);
+    }
+
+    getClient(uuid: string) {
+        const clientArr = this.clients.filter((client) => client.uuid === uuid);
+        return clientArr.length > 0 ? clientArr[0] : null;
     }
 
     /**
@@ -30,6 +35,7 @@ export class ClientList {
 export class Client {
     private id: string;
     private lastSeen: number;
+    private room: string | null = null;
 
     constructor(uuid: string) {
         this.id = uuid;
@@ -45,6 +51,13 @@ export class Client {
     }
 
     /**
+    * Updates the lastSeen of a client to the current time.
+    */
+    updateLastSeen() {
+        this.lastSeen = Date.now().valueOf();
+    }
+
+    /**
     * Returns the uuid of this client.
     * @returns A uuid string
     */
@@ -52,92 +65,69 @@ export class Client {
         return this.id;
     }
 
-}
-
-export const songListExample: songMeta[] = [
-    {
-        artist: 'HOYO-MiX',
-        songTitle: 'Fontaine',
-        albumTitle: 'Fountain of Belleau',
-        coverArt: '/assets/images/covers/cover.jpg',
-        audioUrl: '/assets/audio/Fontaine.flac'
-    },
-    {
-        artist: 'HOYO-MiX',
-        songTitle: 'Le Souvenir avec le crepuscule',
-        albumTitle: 'Fountain of Belleau',
-        coverArt: '/assets/images/covers/cover.jpg',
-        audioUrl: '/assets/audio/Le-Souvenir-avec-le-crepuscule.flac'
-    }
-]
-
-type quizMeta = {
-    name: string,
-    creator: string,
-    createTime: number
-}
-
-export class Quiz {
-    private songList: songMeta[];
-    private quizMetadata: quizMeta;
-
     /**
-    * Returns information associated with this quiz.
-    * @param songList - A list of songs to associate with this quiz
+    * Returns the room which a client is in.
+    * @returns The string of the current room or null if there isn't one.
     */
-    constructor(songList: songMeta[]) {
-        // TODO: load quiz data
-        this.songList = songList
-        this.quizMetadata = {
-            name: "very cool quiz 1",
-            creator: "bill gates",
-            createTime: new Date().valueOf()
-        }
+    get currentRoom() {
+        return this.room;
     }
 
     /**
-    * Returns information associated with this quiz.
-    * @returns A quiz metadata object.
+    * Sets the room which a client is in. Can be null.
     */
-    get data() {
-        return this.quizMetadata;
-    }
-
-    /**
-    * Returns list of songs associated with this quiz.
-    * @returns An array of song metadata.
-    */
-    get songs() {
-        return this.songList;
+    set currentRoom(newRoom: string | null) {
+        this.room = newRoom;
     }
 
 }
 
-export const quizList: Quiz[] = [
-    new Quiz(songListExample)
-]
+
+type Score = {
+    question: number
+    points: number
+}
+
+enum RoomState {
+    InLobby = 0,
+    Starting,
+    InProgress,
+    ShowingLeaderboard,
+    Finished
+} 
 
 export class RoomSession {
     private roomId: string;
     private quizData: Quiz;
     private players: Client[];
+    private scores: Map<Client, Score[]>;
+    private roomState: RoomState;
     private quizSession = {
-        songIndex: 0
+        questionIndex: 0,
+        creationTime: Date.now().valueOf()
     }
 
     constructor(quiz: Quiz, leader: Client) {
         this.roomId = crypto.randomUUID();
         this.quizData = quiz;
         this.players = [leader];
+        leader.currentRoom = this.roomId;
+        this.scores = new Map();
+        this.roomState = RoomState.InLobby;
     }
 
     increment() {
-        if (this.quizSession.songIndex + 1 < this.quizData.songs.length) {
-            ++this.quizSession.songIndex;
-            return this.quizData.songs[this.quizSession.songIndex];
+        let currentSong = this.quizSession.questionIndex;
+        if (currentSong + 1 < this.quizData.songs.length) {
+            ++currentSong;
+            return this.quizData.songs[currentSong];
         } else {
             return null;
         }
+    }
+
+    get state() {
+        return this.roomState;
     }
 
     get id() {
@@ -145,11 +135,23 @@ export class RoomSession {
     }
 
     get currentSong() {
-        return this.quizData.songs[this.quizSession.songIndex];
+        return this.quizData.songs[this.quizSession.questionIndex];
+    }
+
+    get playerCount() {
+        return this.players.length;
+    }
+
+    get creationTime() {
+        return this.quizSession.creationTime;
     }
 
     joinRoom(client: Client) {
+        if (client.currentRoom) {
+            throw new Error("Already in a room!");
+        }
         this.players.push(client);
+        client.currentRoom = this.id;
     }
 
     leaveRoom(client: Client) {
@@ -162,7 +164,20 @@ export class RoomSession {
     }
 
     get leader() {
-        return this.players ? this.players[0] : null;
+        return this.players.length > 0 ? this.players[0] : null;
+    }
+
+    getPlayerScore(client: Client) {
+        let scoreArray = this.scores.get(client);
+        if (scoreArray) {
+            return scoreArray.map((score) => score.points).reduce((sum, points) => sum += points);
+        } else {
+            return null;
+        }
+    }
+
+    getAllScores() {
+        return this.scores;
     }
 }
 
@@ -173,10 +188,11 @@ export class RoomList {
         this.rooms = []
     }
 
-    findRoom(uuid: string) {
-        const roomArr = this.rooms.map((room) => room.id);
-        const indexOfRoom = roomArr.indexOf(uuid);
-        return indexOfRoom !== -1 ? this.rooms[indexOfRoom] : null;
+    findRoom(roomId: string) {
+        const roomArr = this.rooms.filter((room) => room.id === roomId);
+        //const indexOfRoom = roomArr.indexOf(uuid);
+        //return indexOfRoom !== -1 ? this.rooms[indexOfRoom] : null;
+        return roomArr.length > 0 ? roomArr[0] : null;
     }
 
     createRoom(quiz: Quiz, leader: Client) {

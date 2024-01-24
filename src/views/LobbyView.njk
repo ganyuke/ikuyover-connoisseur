@@ -1,0 +1,26 @@
+{% extends "BaseLayout.njk" %}
+
+{% block main %}
+<div class="max-w-[50em] sm:mx-auto my-20 mx-4" hx-ext="ws" ws-connect="/ws">
+  <div class="my-4">
+    <p id="room-uuid">uuid</p>
+    <h1 class="font-black text-white text-4xl my-3 uppercase">{{ sessionData.title }}</h1>
+    <p class="font-black text-gray-500 text-lg" x-data="timer">
+      <span id="quiz-time" x-init="init({{ sessionData.elapsedTime }})" x-text="getTime()">{{ sessionData.elapsedTime }}</span> -
+      <span id="player-count">{{ sessionData.playerCount }}</span> players
+    </p>
+  </div>
+  <div class="grid sm:grid-cols-2 gap-4">
+    {% include "quiz/VisualColumn.njk" %}
+    <div class="bg-brand-card rounded-lg">
+      {% include "quiz/InteractableQuestion.njk" %}
+      {% include "quiz/SongInformation.njk" %}
+    </div>
+    <div></div>
+    <div class="ml-auto mx-5">
+      <p class="text-gray-400">Next song in {{ nextSongSeconds }} second(s)</p>
+    </div>
+  </div>
+</div>
+<script src="/assets/js/AudioPlayer.js" defer></script>
+{% endblock %}

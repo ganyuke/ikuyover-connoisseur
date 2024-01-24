@@ -3,7 +3,8 @@ import { html } from '@elysiajs/html'
 import staticPlugin from '@elysiajs/static';
 import { createUserIdentifer, isUuid } from './utilityFunctions';
 import nunjucks from 'nunjucks'
-import { Client, ClientList, RoomList, quizList } from './clientManagement';
+import { Client, ClientList, RoomList } from './clientManagement';
+import { quizList } from './quizManagement';
 
 const waypoint = new Elysia();
 waypoint.use(html());
@@ -28,22 +29,47 @@ waypoint.onError(({ code, set }) => {
 })
 
 waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
-    // TODO: If user supplies a RoomId in query params,
-    // fetch the data for that room.
+    // Get client object from cookie uuid
+    let client: Client | null = null;
     if (ingsoc?.value && isUuid(ingsoc.value)) {
-        // do nothing
+        client = clientList.getClient(ingsoc.value)
     } else {
         ingsoc.value = createUserIdentifer();
         ingsoc.httpOnly = true;
         ingsoc.sameSite = true;
     }
 
-    return (
-        nunjucks.render("QuizView.njk", { sessionData: {
+    let data = {
+        sessionData: {
             elapsedTime: 0,
             title: "Very cool quiz",
             playerCount: 0
-         }, question: "chat, what is this?", audio_url: "assets/audio/Le-Souvenir-avec-le-crepuscule.flac" })
+        }, question: "chat, what is this?", audio_url: "assets/audio/Le-Souvenir-avec-le-crepuscule.flac"
+    }
+
+    // TODO: If user supplies a RoomId in query params,
+    // fetch the data for that room.
+    if (client) {
+        client.updateLastSeen();
+        if (client.currentRoom) {
+            let currentRoom = roomList.findRoom(client.currentRoom);
+    
+            if (currentRoom) {
+                data.sessionData.elapsedTime = Math.floor(Date.now().valueOf() / 1000 - currentRoom.creationTime / 1000);
+                data.sessionData.playerCount = currentRoom.playerCount;
+                data.sessionData.title = currentRoom.currentSong.songTitle;
+            }
+        }
+    } else {
+        client = new Client(ingsoc.value);
+        clientList.append(client);
+        const room = roomList.createRoom(quizList[0], client);
+    }
+
+    console.log(client)
+
+    return (
+        nunjucks.render("LobbyView.njk", data)
     )
 }, {
     cookie: t.Cookie({
@@ -51,6 +77,7 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
     }),
 })
 
+/*
 waypoint.ws('/ws', {
     open(ws) {
         const uuid = ws.data.cookie.ingsoc.value;
@@ -131,7 +158,7 @@ waypoint.ws('/ws', {
     cookie: t.Cookie({
         ingsoc: t.Optional(t.String())
     })
-})
+})*/
 
 waypoint.listen(4200, () => {
     console.log("elysia running on http://localhost:4200")
