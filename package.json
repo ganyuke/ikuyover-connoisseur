@@ -21,7 +21,7 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.tsx",
-    "css:dev": "unocss \"src/views/**/*.tsx\" \"src/assets/css/*.css\" --watch -o public/uno.css",
-    "css:build": "unocss \"src/views/**/*.tsx\" \"src/assets/css/*.css\" -o public/uno.css"
+    "css:dev": "unocss \"src/views/**/*.njk\" \"src/assets/css/*.css\" --watch -o public/uno.css",
+    "css:build": "unocss \"src/views/**/*.njk\" \"src/assets/css/*.css\" -o public/uno.css"
   }
 }

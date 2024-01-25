@@ -146,6 +146,10 @@ export class RoomSession {
         return this.quizSession.creationTime;
     }
 
+    get quizTitle() {
+        return this.quizData.data.name;
+    }
+
     joinRoom(client: Client) {
         if (client.currentRoom) {
             throw new Error("Already in a room!");
@@ -182,29 +186,24 @@ export class RoomSession {
 }
 
 export class RoomList {
-    private rooms: RoomSession[];
+    private rooms: Map<string, RoomSession>;
 
     constructor() {
-        this.rooms = []
+        this.rooms = new Map();
     }
 
     findRoom(roomId: string) {
-        const roomArr = this.rooms.filter((room) => room.id === roomId);
+        const roomArr = this.rooms.get(roomId);
         //const indexOfRoom = roomArr.indexOf(uuid);
         //return indexOfRoom !== -1 ? this.rooms[indexOfRoom] : null;
-        return roomArr.length > 0 ? roomArr[0] : null;
+        return roomArr ? roomArr : null;
     }
 
     createRoom(quiz: Quiz, leader: Client) {
         const room = new RoomSession(quiz, leader);
-        this.rooms.push(room);
+        this.rooms.set(room.id, room);
         // console.log(this.rooms.length)
         return room;
-    }
-
-    findUser(uuid: string) {
-        const roomArr = this.rooms.filter((room) => room.hasUser(uuid));
-        return roomArr.length > 0 ? roomArr[0] : null;
     }
 
 }

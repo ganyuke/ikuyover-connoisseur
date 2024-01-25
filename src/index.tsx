@@ -6,6 +6,10 @@ import nunjucks from 'nunjucks'
 import { Client, ClientList, RoomList } from './clientManagement';
 import { quizList } from './quizManagement';
 
+// ----------- //
+// SETUP STUFF //
+// ----------- //
+
 const waypoint = new Elysia();
 waypoint.use(html());
 waypoint.use(staticPlugin({
@@ -16,7 +20,7 @@ waypoint.use(staticPlugin({
 const clientList = new ClientList;
 const roomList = new RoomList;
 
-nunjucks.configure('src/views/', { autoescape: true });
+nunjucks.configure('src/views/', { autoescape: true, watch: true });
 
 waypoint.onError(({ code, set }) => {
     switch (code) {
@@ -28,92 +32,95 @@ waypoint.onError(({ code, set }) => {
     }
 })
 
+// --------- //
+// ENDPOINTS //
+// --------- //
+
+/**
+ * The objectives in this endpoint are as follows:
+ *  - Supply the base page.
+ *  - If the player is new, give them a cookie.
+ *  - If the player is in a game, hydrate the current game information.
+ *  - If the player isn't, prompt them to create a room or join one.
+ *  - TODO: Accepts query parameters to join a room.
+ */
 waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
-    // Get client object from cookie uuid
+    // We want to check if the client exists so we can check if
+    // they also have a room. Otherwise, give them a cookie.
     let client: Client | null = null;
     if (ingsoc?.value && isUuid(ingsoc.value)) {
-        client = clientList.getClient(ingsoc.value)
+        client = clientList.getClient(ingsoc.value);
     } else {
         ingsoc.value = createUserIdentifer();
         ingsoc.httpOnly = true;
         ingsoc.sameSite = true;
     }
 
-    let data = {
-        sessionData: {
-            elapsedTime: 0,
-            title: "Very cool quiz",
-            playerCount: 0
-        }, question: "chat, what is this?", audio_url: "assets/audio/Le-Souvenir-avec-le-crepuscule.flac"
-    }
-
-    // TODO: If user supplies a RoomId in query params,
-    // fetch the data for that room.
+    // Hydrate the page with actual data if the client is in a room.
+    // Otherwise, create a new client to deal with them.
     if (client) {
         client.updateLastSeen();
         if (client.currentRoom) {
             let currentRoom = roomList.findRoom(client.currentRoom);
-    
             if (currentRoom) {
-                data.sessionData.elapsedTime = Math.floor(Date.now().valueOf() / 1000 - currentRoom.creationTime / 1000);
-                data.sessionData.playerCount = currentRoom.playerCount;
-                data.sessionData.title = currentRoom.currentSong.songTitle;
+                const data = {
+                    sessionData: {
+                        elapsedTime: Math.floor(Date.now().valueOf() / 1000 - currentRoom.creationTime / 1000),
+                        playerCount: currentRoom.playerCount,
+                        title: currentRoom.quizTitle,
+                        uuid: currentRoom.id
+
+                    },
+                    audio_url: currentRoom.currentSong.audioUrl,
+                    question: "name the song!"
+                }
+                return (
+                    nunjucks.render("QuizView.njk", data)
+                )
             }
         }
     } else {
         client = new Client(ingsoc.value);
         clientList.append(client);
-        const room = roomList.createRoom(quizList[0], client);
     }
 
-    console.log(client)
-
     return (
-        nunjucks.render("LobbyView.njk", data)
+        nunjucks.render("LobbyView.njk")
     )
 }, {
     cookie: t.Cookie({
         ingsoc: t.Optional(t.String())
-    }),
+    })
 })
 
-/*
+/**
+ * The objectives in this endpoint are as follows:
+ *  - User MUST have a cookie to access.
+ *  - Connect the user to a game.
+ *  - Hydrate the page with the current state of the game.
+ *  - Respond to user inputs (i.e. answers)
+ */
 waypoint.ws('/ws', {
     open(ws) {
         const uuid = ws.data.cookie.ingsoc.value;
-        // TODO: If user supplies a RoomId in query params,
-        // subscribe the user to that room.
         if (uuid) {
-            if (clientList.exists(uuid)) {
-                const room = roomList.findUser(uuid)
+            const client = clientList.getClient(uuid);
+            if (client && client.currentRoom) {
+                const room = roomList.findRoom(client.currentRoom);
                 if (room) {
-                    // TODO: get room id and subscribe
                     ws.subscribe(room.id);
 
                     ws.send(<>
                         <p id="room-uuid">Room: {room.id} {`(rejoined)`}</p>
                     </>)
+                    return;
                 }
-            } else {
-                const client = new Client(uuid);
-                clientList.append(client);
-                // TODO: send client current game state
-
-                const room = roomList.createRoom(quizList[0], client);
-                ws.subscribe(room.id);
-
-                ws.send(<>
-                    <p id="room-uuid">Room: {room.id} {`(new join)`}</p>
-
-                </>)
-
             }
-        } else {
-            // TODO: deal with people that somehow get
-            // past the uuid cookie check
-            ws.close();
-            return;
         }
+        // TODO: deal with people that somehow get
+        // past the uuid cookie check
+        ws.close();
+        return;
     },
     body: t.Object({
         answer: t.String(),
@@ -128,22 +135,25 @@ waypoint.ws('/ws', {
     message(ws, message) {
         const uuid = ws.data.cookie.ingsoc.value;
         if (uuid && isUuid(uuid)) {
-            const room = roomList.findUser(uuid);
+            let client: Client | null = clientList.getClient(uuid);
+            if (client && client.currentRoom) {
+                const room = roomList.findRoom(client.currentRoom);
 
-            if (message.answer === room?.currentSong.songTitle) {
-                const victoryHtml: string = [
-                    nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentSong }),
-                    nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentSong.coverArt }),
-                    nunjucks.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
-                ].join();
-                ws.send(victoryHtml);
+                if (message.answer.toLowerCase() === room?.currentSong.songTitle.toLowerCase()) {
+                    const victoryHtml: string = [
+                        nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentSong }),
+                        nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentSong.coverArt }),
+                        nunjucks.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
+                    ].join();
+                    ws.send(victoryHtml);
 
-                // TODO: notify other players that someone answered correctly.
-                //       ws.publish('fontaine', )
+                    // TODO: notify other players that someone answered correctly.
+                    //       ws.publish('fontaine', )
 
-            } else {
-                const incorrectReponseHtml: string = nunjucks.render("quiz/SolveStatus.njk", { solve_status: false, message: 'no idiot' });
-                ws.send(incorrectReponseHtml);
+                } else {
+                    const incorrectReponseHtml: string = nunjucks.render("quiz/SolveStatus.njk", { solve_status: false, message: 'no idiot' });
+                    ws.send(incorrectReponseHtml);
+                }
             }
         } else {
             ws.close();
@@ -152,13 +162,49 @@ waypoint.ws('/ws', {
     },
     beforeHandle: ({ cookie: { ingsoc } }) => {
         if (ingsoc.value === undefined) {
-            return new Response(null, { status: 401 })
+            return new Response(null, { status: 401 });
         }
     },
     cookie: t.Cookie({
         ingsoc: t.Optional(t.String())
     })
-})*/
+})
+
+/**
+ * The objectives in this endpoint are as follows:
+ *  - Create a new room and set the leader as the client
+ */
+waypoint.post("/create-room", ({ cookie: { ingsoc } }) => {
+    // We want to check if the client exists so we can check if
+    // they also have a room. Otherwise, give them a cookie.
+    let client: Client | null = null;
+    if (ingsoc?.value && isUuid(ingsoc.value)) {
+        client = clientList.getClient(ingsoc.value);
+    } else {
+        ingsoc.value = createUserIdentifer();
+        ingsoc.httpOnly = true;
+        ingsoc.sameSite = true;
+    }
+
+    // Hydrate the page with actual data if the client is in a room.
+    // Otherwise, create a new client to deal with them.
+    if (client) {
+        client.updateLastSeen();
+        if (client.currentRoom) {
+            return new Response(null, { status: 400 })
+        } else {
+            roomList.createRoom(quizList[0], client);
+            return new Response(null, { status: 200 })
+        }
+    }
+
+    return new Response(null, { status: 401 })
+}, {
+    cookie: t.Cookie({
+        ingsoc: t.Optional(t.String())
+    })
+})
+
 
 waypoint.listen(4200, () => {
     console.log("elysia running on http://localhost:4200")

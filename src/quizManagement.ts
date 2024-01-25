@@ -19,8 +19,8 @@ export class Quiz {
         // TODO: load quiz data
         this.songList = songList
         this.quizMetadata = {
-            name: "very cool quiz 1",
-            creator: "bill gates",
+            name: "I love Suisei",
+            creator: "hoshiyomi",
             createTime: new Date().valueOf()
         }
     }
