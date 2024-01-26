@@ -51,37 +51,36 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
     if (ingsoc?.value && isUuid(ingsoc.value)) {
         client = clientList.getClient(ingsoc.value);
     } else {
+        // Give the new client an identifier
         ingsoc.value = createUserIdentifer();
         ingsoc.httpOnly = true;
         ingsoc.sameSite = true;
+        // Track the client
+        client = new Client(ingsoc.value);
+        clientList.append(client);
+        roomList.createRoom(quizList[0], client);
     }
 
     // Hydrate the page with actual data if the client is in a room.
     // Otherwise, create a new client to deal with them.
     if (client) {
         client.updateLastSeen();
-        if (client.currentRoom) {
-            let currentRoom = roomList.findRoom(client.currentRoom);
-            if (currentRoom) {
-                const data = {
-                    sessionData: {
-                        elapsedTime: Math.floor(Date.now().valueOf() / 1000 - currentRoom.creationTime / 1000),
-                        playerCount: currentRoom.playerCount,
-                        title: currentRoom.quizTitle,
-                        uuid: currentRoom.id
-
-                    },
-                    audio_url: currentRoom.currentSong.audioUrl,
-                    question: "name the song!"
-                }
-                return (
-                    nunjucks.render("QuizView.njk", data)
-                )
+        const currentRoom = client.currentRoom ? roomList.findRoom(client.currentRoom) : null;
+        if (currentRoom) {
+            const data = {
+                sessionData: {
+                    elapsedTime: Math.floor(Date.now().valueOf() / 1000 - currentRoom.creationTime / 1000),
+                    playerCount: currentRoom.playerCount,
+                    title: currentRoom.quizTitle,
+                    uuid: currentRoom.id
+                },
+                audio_url: currentRoom.currentSong.audioUrl,
+                question: "name the song!"
             }
+            return (
+                nunjucks.render("QuizView.njk", data)
+            )
         }
-    } else {
-        client = new Client(ingsoc.value);
-        clientList.append(client);
     }
 
     return (
