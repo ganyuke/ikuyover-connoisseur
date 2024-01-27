@@ -29,7 +29,8 @@ export const fullPageGenerate = (client: Client, room?: string) => {
                         players: currentRoom.players,
                         title: currentRoom.quizMetadata.title,
                         uuid: currentRoom.id
-                    }
+                    },
+                    client_id: client.uuid
                 }
                 return (
                     trinty.render("LobbyView.njk", data)
