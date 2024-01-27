@@ -4,8 +4,8 @@ import staticPlugin from '@elysiajs/static';
 import { createUserIdentifer, isUuid } from './utilityFunctions';
 import nunjucks from 'nunjucks'
 import { Client } from './clients';
-import { ClientList, RoomList, quizList } from './grossLists';
-import { fullPageGenerate, hydrateWebsocket, sendToRoom } from './hydration';
+import { ClientList, RoomList } from './grossLists';
+import { fullPageGenerate, sendToRoom, wsHydrateAnswer, wsHydrateQuestion } from './hydration';
 
 // ----------- //
 // SETUP STUFF //
@@ -111,9 +111,9 @@ waypoint.ws('/ws', {
         answer: t.Optional(t.String()),
         HEADERS: t.Object({
             "HX-Request": t.String(),
-            "HX-Trigger": t.Union([t.String(), t.Null()]),
-            "HX-Trigger-Name": t.Union([t.String(), t.Null()]),
-            "HX-Target": t.Union([t.String(), t.Null()]),
+            "HX-Trigger": t.Nullable(t.String()),
+            "HX-Trigger-Name": t.Nullable(t.String()),
+            "HX-Target": t.Nullable(t.String()),
             "HX-Current-URL": t.String(),
         })
     }),
@@ -121,12 +121,24 @@ waypoint.ws('/ws', {
         const uuid = ws.data.cookie.ingsoc.value;
         if (uuid && isUuid(uuid)) {
             let client: Client | null = clientList.getClient(uuid);
+
             if (client) {
-                ws.send(hydrateWebsocket(client, message.operation, message.answer));
+                switch (message.operation) {
+                    case "answer":
+                        if (message.answer) {
+                            const html = wsHydrateAnswer(client, message.answer);
+                            if (html) {
+                                return ws.send(html);
+                            }
+                        }
+                        break;
+                    case "start-game":
+                        const html = wsHydrateQuestion(client);
+                        if (html) {
+                            return ws.send(html);
+                        }
+                }
             }
-        } else {
-            ws.close();
-            return;
         }
     },
     beforeHandle: ({ cookie: { ingsoc } }) => {
