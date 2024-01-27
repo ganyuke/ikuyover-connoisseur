@@ -2,10 +2,10 @@ import { roomList, trinty } from ".";
 import type { Client } from "./clients";
 import { quizList } from "./grossLists";
 
-export const fullPageGenerate = (client: Client) => {
+export const fullPageGenerate = (client: Client, room?: string) => {
     if (client) {
         client.updateLastSeen();
-        const currentRoom = client.currentRoom ? roomList.findRoom(client.currentRoom) : null;
+        const currentRoom = client.currentRoom ? roomList.findRoom(client.currentRoom) : room ? roomList.findRoom(room) : null;
         if (currentRoom) {
             if (currentRoom.currentState === 1) {
                 const audio = currentRoom.currentQuestion?.resources.find((resource) => resource.type === "audio")?.url ?? null;

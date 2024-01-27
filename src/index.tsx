@@ -6,6 +6,7 @@ import nunjucks from 'nunjucks'
 import { Client } from './clients';
 import { ClientList, RoomList } from './grossLists';
 import { fullPageGenerate, sendToRoom, wsHydrateAnswer, wsHydrateQuestion } from './hydration';
+import { websocket } from 'elysia/ws';
 
 // ----------- //
 // SETUP STUFF //
@@ -19,6 +20,7 @@ waypoint.use(staticPlugin({
 }))
 
 const PORT = 4200;
+websocket.publishToSelf = true;
 
 const clientList = new ClientList;
 export const roomList = new RoomList;
@@ -48,7 +50,7 @@ waypoint.onError(({ code, set }) => {
  *  - If the player isn't, prompt them to create a room or join one.
  *  - TODO: Accepts query parameters to join a room.
  */
-waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
+waypoint.get("/quiz", ({ cookie: { ingsoc }, query: { room } }) => {
     // We want to check if the client exists so we can check if
     // they also have a room. Otherwise, give them a cookie.
     let client: Client | null = null;
@@ -66,14 +68,29 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
         client = new Client(ingsoc.value);
         clientList.append(client);
     }
+    // Handle queries for rooms
+    if (room) {
+        const roomToJoin = roomList.findRoom(decodeURIComponent(room.replace(/\+/g, " ")));
+        // Prevent players from being in two rooms at once.
+        if (roomToJoin) {
+            if (client.currentRoom && roomToJoin.id !== client.currentRoom) {
+                roomList.findRoom(client.currentRoom)?.removePlayer(client.uuid);
+            }
+            client.currentRoom = roomToJoin.id;
+            roomToJoin.addPlayer(client.uuid);
+        }
+    }
 
     // Hydrate the page with actual data if the client is in a room.
     // Otherwise, create a new client to deal with them.
-    return fullPageGenerate(client);
+    return fullPageGenerate(client, room);
 
 }, {
     cookie: t.Cookie({
         ingsoc: t.Optional(t.String())
+    }),
+    query: t.Object({
+        room: t.Optional(t.String())
     })
 })
 
@@ -137,6 +154,18 @@ waypoint.ws('/ws', {
                         if (html) {
                             return ws.send(html);
                         }
+                        break;
+                    case "leave-room":
+                        const room = client.currentRoom ? roomList.findRoom(client.currentRoom) : null;
+                        if (room) {
+                            room.removePlayer(client.uuid);
+                            client.currentRoom = null;
+                            ws.unsubscribe(room.id);
+                            ws.send(<>
+                                <p id="room-uuid">Room: {room.id} <span class="text-red-900">{`(DISCONNECTED)`}</span></p>
+                            </>)
+                        }
+                        return ws.close();
                 }
             }
         }

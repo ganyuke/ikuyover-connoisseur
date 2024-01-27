@@ -1,12 +1,12 @@
-<div id="workspace" class="grid sm:grid-cols-2 gap-4">
+  <div id="workspace" class="grid sm:grid-cols-2 gap-4">
     {% include "quiz/VisualColumn.njk" %}
     <div class="bg-brand-card rounded-lg">
       {% include "quiz/InteractableQuestion.njk" %}
       {% include "quiz/SongInformation.njk" %}
     </div>
-    <div></div>
-    <div class="ml-auto mx-5">
-      <p class="text-gray-400">Next song in {{ nextSongSeconds }} second(s)</p>
+    <div>
+      <button type="button" ws-send hx-trigger="click" name="operation" value="leave-room" class="text-red-900">👋 Leave game</button>
     </div>
+    <div id="next-time"></div>
   </div>
 </div>

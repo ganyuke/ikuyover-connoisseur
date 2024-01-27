@@ -34,8 +34,8 @@ enum GameState {
  */
 export class RoomSession {
     private linkedQuiz: Quiz;
-    private roomId: string = crypto.randomUUID();
-    private playerList: Player[] = [];
+    private roomId: string;
+    private playerList: Set<Player> = new Set();
     private scores: Map<number, Score[]> = new Map();
     private gameState = {
         currQuestionIndex: -1,
@@ -45,8 +45,9 @@ export class RoomSession {
         status: GameState.LOBBY
     }
 
-    constructor(newQuiz: Quiz) {
+    constructor(newQuiz: Quiz, id?: string) {
         this.linkedQuiz = newQuiz;
+        this.roomId = id ?? crypto.randomUUID();
     }
 
     /**
@@ -222,7 +223,7 @@ export class RoomSession {
      * @returns an array of Player objects
      */
     get players() {
-        return this.playerList;
+        return [...this.playerList.values()];
     }
 
     /**
@@ -231,21 +232,21 @@ export class RoomSession {
      * @returns a Player object
      */
     get leader() {
-        return this.playerList[0] ?? null;
+        return this.players[0] ?? null;
     }
 
     /**
      * Adds a player to the room's internal player list.
      */
     addPlayer(player: Player) {
-        this.playerList.push(player);
+        this.playerList.add(player);
     }
 
     /**
      * Removes a player from the room's internal player list.
      */
     removePlayer(player: Player) {
-        this.playerList = this.playerList.filter((entry) => player !== entry);
+        this.playerList.delete(player);
     }
 
     /**

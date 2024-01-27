@@ -1,4 +1,22 @@
 document.addEventListener('alpine:init', () => {
+    Alpine.data('countdown', () => ({
+        time: 0,
+        intervalId: -1,
+        init(startTime = 0) {
+            this.time = startTime
+            if (this.intervalId !== -1) {
+                clearInterval(this.intervalId)
+            }
+
+            this.intervalId = setInterval(() => {
+                if (this.time <= 0) {
+                    clearInterval(this.intervalId);
+                }
+                this.time--;
+            }, 1000)
+        }
+
+    }))
     Alpine.data('timer', () => ({
         time: 0,
         intervalId: -1,

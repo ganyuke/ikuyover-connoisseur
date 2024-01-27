@@ -9,18 +9,16 @@
   <div class="bg-brand-card rounded-lg">
     <div class="my-4">
       <h2 class="font-black text-3xl text-center text-white uppercase">Join a game</h2>
-      <form class="text-center my-3 w-full" method="post">
-        <input type="text" name="room_id" required
-          class="bg-[#393c48] text-center text-white h-16 text-2xl mb-3" />
+      <form class="text-center my-3 w-full" method="get">
+        <input type="text" name="room" required class="bg-[#393c48] text-center text-white h-16 text-2xl mb-3" />
+        <input type="submit" value="yeah" class="p-5">
       </form>
     </div>
-        <div class="my-4">
-      <h2 class="font-black text-3xl text-center text-white uppercase">Create a game</h2>
-      <form class="text-center my-3 w-full" method="post">
-        <button class="p-5" hx-post="/create-room" hx-trigger="click">
-            yeah
-        </button>
-      </form>
+    <div class="my-4 text-center">
+      <h2 class="font-black text-3xl text-white uppercase">Create a game</h2>
+      <button type="button" class="p-5 inline" hx-post="/create-room" hx-trigger="click">
+        yeah
+      </button>
     </div>
   </div>
 </div>

@@ -7,7 +7,9 @@ export class RoomList {
     private rooms: Map<string, RoomSession>;
 
     constructor() {
-        this.rooms = new Map();
+        this.rooms = new Map([
+            ["court of fontaine", new RoomSession(quizList[0], "court of fontaine")]
+        ]);
     }
 
     findRoom(roomId: string) {
