@@ -1,0 +1,10 @@
+<ol id="player-list">
+    {% for player in sessionData.players %}
+    <li class="player-entry">
+        {% if loop.index0 === 0 %}<span class="icon">👑</span>{% endif %}
+        <p>
+            Anon {{ player.slice(7,15) }} <span class="hover-expand text-xs p-4">{{ player }}</span>
+        </p>
+    </li>
+    {% endfor %}
+</ol>

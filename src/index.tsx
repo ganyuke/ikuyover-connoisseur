@@ -5,6 +5,7 @@ import { createUserIdentifer, isUuid } from './utilityFunctions';
 import nunjucks from 'nunjucks'
 import { Client } from './clients';
 import { ClientList, RoomList, quizList } from './grossLists';
+import { fullPageGenerate, hydrateWebsocket, sendToRoom } from './hydration';
 
 // ----------- //
 // SETUP STUFF //
@@ -17,10 +18,13 @@ waypoint.use(staticPlugin({
     alwaysStatic: true
 }))
 
+const PORT = 4200;
+
 const clientList = new ClientList;
-const roomList = new RoomList;
+export const roomList = new RoomList;
 
 nunjucks.configure('src/views/', { autoescape: true, watch: true });
+export const trinty = nunjucks;
 
 waypoint.onError(({ code, set }) => {
     switch (code) {
@@ -50,45 +54,23 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
     let client: Client | null = null;
     if (ingsoc?.value && isUuid(ingsoc.value)) {
         client = clientList.getClient(ingsoc.value);
-    }
-
-    // Even with a cookie, the client may still not exist yet.
-    if (client === null) {
+    } else {
         // Give the new client an identifier
         ingsoc.value = createUserIdentifer();
         ingsoc.httpOnly = true;
         ingsoc.sameSite = true;
-        // Track the client
+    }
+
+    // Even with a cookie, the client may still not exist yet.
+    if (client === null) {
         client = new Client(ingsoc.value);
         clientList.append(client);
     }
 
     // Hydrate the page with actual data if the client is in a room.
     // Otherwise, create a new client to deal with them.
-    if (client) {
-        client.updateLastSeen();
-        const currentRoom = client.currentRoom ? roomList.findRoom(client.currentRoom) : null;
-        if (currentRoom) {
-            const audio = currentRoom.currentQuestion?.resources.find((resource) => resource.type === "audio")?.url ?? null;
-            const data = {
-                sessionData: {
-                    elapsedTime: Math.floor(currentRoom.timeSinceStart / 1000),
-                    playerCount: currentRoom.players.length,
-                    title: currentRoom.quizMetadata.title,
-                    uuid: currentRoom.id
-                },
-                audio_url: audio,
-                question: currentRoom.currentQuestion?.prompt
-            }
-            return (
-                nunjucks.render("QuizView.njk", data)
-            )
-        }
-    }
+    return fullPageGenerate(client);
 
-    return (
-        nunjucks.render("LobbyView.njk")
-    )
 }, {
     cookie: t.Cookie({
         ingsoc: t.Optional(t.String())
@@ -125,7 +107,8 @@ waypoint.ws('/ws', {
         return;
     },
     body: t.Object({
-        answer: t.String(),
+        operation: t.String(),
+        answer: t.Optional(t.String()),
         HEADERS: t.Object({
             "HX-Request": t.String(),
             "HX-Trigger": t.Union([t.String(), t.Null()]),
@@ -138,24 +121,8 @@ waypoint.ws('/ws', {
         const uuid = ws.data.cookie.ingsoc.value;
         if (uuid && isUuid(uuid)) {
             let client: Client | null = clientList.getClient(uuid);
-            if (client && client.currentRoom) {
-                const room = roomList.findRoom(client.currentRoom);
-
-                if (room?.submitAnswer(client.uuid, message.answer)) {
-                    const victoryHtml: string = [
-                        nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentQuestion?.data?.[0].songTitle }),
-                        nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentQuestion?.resources.find((entry) => entry.type === "cover")?.url }),
-                        nunjucks.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
-                    ].join();
-                    ws.send(victoryHtml);
-
-                    // TODO: notify other players that someone answered correctly.
-                    //       ws.publish('fontaine', )
-
-                } else {
-                    const incorrectReponseHtml: string = nunjucks.render("quiz/SolveStatus.njk", { solve_status: false, message: 'no idiot' });
-                    ws.send(incorrectReponseHtml);
-                }
+            if (client) {
+                ws.send(hydrateWebsocket(client, message.operation, message.answer));
             }
         } else {
             ws.close();
@@ -168,7 +135,7 @@ waypoint.ws('/ws', {
         }
     },
     cookie: t.Cookie({
-        ingsoc: t.Optional(t.String())
+        ingsoc: t.String()
     })
 })
 
@@ -186,17 +153,9 @@ waypoint.post("/create-room", ({ cookie: { ingsoc } }) => {
 
     // Hydrate the page with actual data if the client is in a room.
     // Otherwise, create a new client to deal with them.
-    if (client) {
-        client.updateLastSeen();
-        if (client.currentRoom) {
-            return new Response(null, { status: 400 })
-        } else {
-            roomList.createRoom(quizList[0], client);
-            return new Response(null, { status: 200 })
-        }
-    }
+    if (client) return sendToRoom(client);
 
-    return new Response(null, { status: 401 })
+    return new Response(null, { status: 401 });
 }, {
     cookie: t.Cookie({
         ingsoc: t.Optional(t.String())
@@ -204,6 +163,6 @@ waypoint.post("/create-room", ({ cookie: { ingsoc } }) => {
 })
 
 
-waypoint.listen(4200, () => {
-    console.log("elysia running on http://localhost:4200")
+waypoint.listen(PORT, () => {
+    console.log("elysia running on http://localhost:" + PORT)
 })

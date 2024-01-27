@@ -1,0 +1,14 @@
+<div id="workspace" class="grid sm:grid-cols-2 gap-4">
+    <div class="bg-brand-card rounded-lg text-whitae p-4">
+      <p>You find yourself in the lobby. Welcome.</p>
+      <form class="text-center my-3 w-full" ws-send method="post">
+        <input type="text" name="operation" value="start-game" class="hidden" />
+        <input type="submit" value="yeah" class="p-5" />
+      </form>
+    </div>
+    <div class="bg-brand-card rounded-lg text-white p-4">
+      <h2>Currently connected players:</h2>
+      {% include "lobby/PlayerList.njk" %}
+    </div>
+  </div>
+</div>

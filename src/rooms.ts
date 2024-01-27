@@ -67,7 +67,7 @@ export class RoomSession {
 
     /**
      * Returns the current question.
-     * @returns An object of type Question or an empty object (if the game hasn't started)
+     * @returns An object of type Question or null (if the game hasn't started)
      */
     get currentQuestion() {
         return this.linkedQuiz.questions[this.gameState.currQuestionIndex] ?? null;
@@ -207,7 +207,8 @@ export class RoomSession {
      */
     submitAnswer(player: Player, answer: string) {
         const submissionTime = this.timeSincePrompt;
-        if (this.currentQuestion.answer === answer) {
+        // Note: currentQuestion CAN return null.
+        if (this.gameState.status === 1 && this.currentQuestion?.answer === answer) {
             this.updatePlayerScore(player, submissionTime);
             this.advanceQuestion();
             return true;

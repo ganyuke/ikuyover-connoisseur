@@ -31,3 +31,22 @@ progress::-moz-progress-bar {
 p {
   color: white;
 }
+
+li.player-entry p span.hover-expand {
+  display: none;
+  color: gray;
+  white-space: nowrap;
+}
+
+li.player-entry p:hover span.hover-expand {
+  display: inline;
+}
+
+li.player-entry {
+  margin-left: 1em;
+  margin-right: 1em;
+}
+
+li.player-entry span.icon {
+  float: right;
+}

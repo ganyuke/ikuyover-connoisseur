@@ -1,0 +1,8 @@
+<div class="my-4" id="quiz-heading">
+    <p id="room-uuid">{{ sessionData.uuid }}</p>
+    <h1 class="font-black text-white text-4xl my-3 uppercase">{{ sessionData.title }}</h1>
+    <p class="font-black text-gray-500 text-lg" x-data="timer">
+      <span id="quiz-time" x-init="init({{ sessionData.elapsedTime }})" x-text="getTime()">{{ sessionData.elapsedTime }}</span> -
+      <span id="player-count">{{ sessionData.players | length }}</span> players
+    </p>
+  </div>
