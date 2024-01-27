@@ -1,0 +1,12 @@
+name: bocchi's guitar string
+on: [push]
+jobs:
+  test:
+    name: Did I break something?
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+      - name: See if it breaks
+        run: bun test
