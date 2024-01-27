@@ -1,6 +1,5 @@
 import type { Quiz } from "./quiz";
 
-
 /**
  * Scores are calculated based
  * on how fast a player enters
@@ -68,7 +67,7 @@ export class RoomSession {
 
     /**
      * Returns the current question.
-     * @returns An object of type Question
+     * @returns An object of type Question or an empty object (if the game hasn't started)
      */
     get currentQuestion() {
         return this.linkedQuiz.questions[this.gameState.currQuestionIndex] ?? null;

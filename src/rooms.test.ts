@@ -2,6 +2,7 @@ import { expect, test, describe } from "bun:test";
 import { metadata, testQuestionsOne } from "./resources.test";
 import { Quiz } from "./quiz";
 import { RoomSession } from "./rooms";
+import { isUuid } from "./utilityFunctions";
 
 describe("Testing room functionality.", () => {
     describe("Test player mangement.", () => {
@@ -84,8 +85,21 @@ describe("Testing room functionality.", () => {
 
     describe("Test game life cycle.", () => {
         const newQuiz = new Quiz(testQuestionsOne, metadata);
-        let newRoom = new RoomSession(newQuiz);    
+        let newRoom = new RoomSession(newQuiz);
         const bestGirl = "Furina de Fontaine";
+
+        test("Check that we set the quiz metadata correctly.", () => {
+            expect(newRoom.quizMetadata).toMatchObject(newQuiz.metadata);
+        })
+
+        test("Check that a random room UUID was correctly generated.", () => {
+            expect(newRoom.id).toBeString();
+            expect(isUuid(newRoom.id)).toBeTrue();
+        })
+
+        test("Check if the timeSinceStart sounds sane", () => {
+            expect(newRoom.timeSinceStart).toBeWithin(0, 100);
+        })
 
         test("Check that we can end the game by making everyone leave.", () => {
             newRoom.addPlayer(bestGirl);
@@ -108,7 +122,14 @@ describe("Testing room functionality.", () => {
                 expect(newRoom.submitAnswer(bestGirl, question.answer)).toBeTrue();
             }
             expect(newRoom.currentState === 3);
-        })        
+        }) 
+        
+        newRoom = new RoomSession(newQuiz);
+
+        test("Check that we can end the game directly.", async () => {
+            newRoom.endGame();
+            expect(newRoom.currentState).toBe(3);
+        })
     })
 
     describe("Test scoring.", () => {

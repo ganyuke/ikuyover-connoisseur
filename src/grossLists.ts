@@ -12,16 +12,14 @@ export class RoomList {
 
     findRoom(roomId: string) {
         const roomArr = this.rooms.get(roomId);
-        //const indexOfRoom = roomArr.indexOf(uuid);
-        //return indexOfRoom !== -1 ? this.rooms[indexOfRoom] : null;
         return roomArr ? roomArr : null;
     }
 
     createRoom(quiz: Quiz, leader: Client) {
         const room = new RoomSession(quiz);
-        room.addPlayer(leader.uuid)
+        room.addPlayer(leader.uuid);
+        leader.currentRoom = room.id;
         this.rooms.set(room.id, room);
-        // console.log(this.rooms.length)
         return room;
     }
 

@@ -50,7 +50,10 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
     let client: Client | null = null;
     if (ingsoc?.value && isUuid(ingsoc.value)) {
         client = clientList.getClient(ingsoc.value);
-    } else {
+    }
+
+    // Even with a cookie, the client may still not exist yet.
+    if (client === null) {
         // Give the new client an identifier
         ingsoc.value = createUserIdentifer();
         ingsoc.httpOnly = true;
@@ -58,7 +61,6 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
         // Track the client
         client = new Client(ingsoc.value);
         clientList.append(client);
-        roomList.createRoom(quizList[0], client);
     }
 
     // Hydrate the page with actual data if the client is in a room.
@@ -67,6 +69,7 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
         client.updateLastSeen();
         const currentRoom = client.currentRoom ? roomList.findRoom(client.currentRoom) : null;
         if (currentRoom) {
+            const audio = currentRoom.currentQuestion?.resources.find((resource) => resource.type === "audio")?.url ?? null;
             const data = {
                 sessionData: {
                     elapsedTime: Math.floor(currentRoom.timeSinceStart / 1000),
@@ -74,8 +77,8 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
                     title: currentRoom.quizMetadata.title,
                     uuid: currentRoom.id
                 },
-                audio_url: currentRoom.currentQuestion.resources.find((resource) => resource.type === "audio")?.url,
-                question: "name the song!"
+                audio_url: audio,
+                question: currentRoom.currentQuestion?.prompt
             }
             return (
                 nunjucks.render("QuizView.njk", data)
@@ -140,8 +143,8 @@ waypoint.ws('/ws', {
 
                 if (room?.submitAnswer(client.uuid, message.answer)) {
                     const victoryHtml: string = [
-                        nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentQuestion.data?.[0].songTitle }),
-                        nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentQuestion.resources.find((entry) => entry.type === "cover")?.url }),
+                        nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentQuestion?.data?.[0].songTitle }),
+                        nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentQuestion?.resources.find((entry) => entry.type === "cover")?.url }),
                         nunjucks.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
                     ].join();
                     ws.send(victoryHtml);
@@ -179,10 +182,6 @@ waypoint.post("/create-room", ({ cookie: { ingsoc } }) => {
     let client: Client | null = null;
     if (ingsoc?.value && isUuid(ingsoc.value)) {
         client = clientList.getClient(ingsoc.value);
-    } else {
-        ingsoc.value = createUserIdentifer();
-        ingsoc.httpOnly = true;
-        ingsoc.sameSite = true;
     }
 
     // Hydrate the page with actual data if the client is in a room.
