@@ -1,9 +1,7 @@
 export type songMeta = {
   albumTitle?: string
-  coverArt: string
   artist: string
   songTitle: string
-  audioUrl: string
 }
 
 // Work around Elysia's cookie parser throwing

@@ -3,8 +3,8 @@ import { html } from '@elysiajs/html'
 import staticPlugin from '@elysiajs/static';
 import { createUserIdentifer, isUuid } from './utilityFunctions';
 import nunjucks from 'nunjucks'
-import { Client, ClientList, RoomList } from './clientManagement';
-import { quizList } from './quizManagement';
+import { Client } from './clients';
+import { ClientList, RoomList, quizList } from './grossLists';
 
 // ----------- //
 // SETUP STUFF //
@@ -69,12 +69,12 @@ waypoint.get("/quiz", ({ cookie: { ingsoc } }) => {
         if (currentRoom) {
             const data = {
                 sessionData: {
-                    elapsedTime: Math.floor(Date.now().valueOf() / 1000 - currentRoom.creationTime / 1000),
-                    playerCount: currentRoom.playerCount,
-                    title: currentRoom.quizTitle,
+                    elapsedTime: Math.floor(currentRoom.timeSinceStart / 1000),
+                    playerCount: currentRoom.players.length,
+                    title: currentRoom.quizMetadata.title,
                     uuid: currentRoom.id
                 },
-                audio_url: currentRoom.currentSong.audioUrl,
+                audio_url: currentRoom.currentQuestion.resources.find((resource) => resource.type === "audio")?.url,
                 question: "name the song!"
             }
             return (
@@ -138,10 +138,10 @@ waypoint.ws('/ws', {
             if (client && client.currentRoom) {
                 const room = roomList.findRoom(client.currentRoom);
 
-                if (message.answer.toLowerCase() === room?.currentSong.songTitle.toLowerCase()) {
+                if (room?.submitAnswer(client.uuid, message.answer)) {
                     const victoryHtml: string = [
-                        nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentSong }),
-                        nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentSong.coverArt }),
+                        nunjucks.render("quiz/SongInformation.njk", { metadata: room.currentQuestion.data?.[0].songTitle }),
+                        nunjucks.render("quiz/CoverArt.njk", { coverArtUrl: room.currentQuestion.resources.find((entry) => entry.type === "cover")?.url }),
                         nunjucks.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
                     ].join();
                     ws.send(victoryHtml);
