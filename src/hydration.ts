@@ -99,14 +99,19 @@ export const wsHydrateAnswer = (client: Client, answer: string) => {
                 trinty.render("quiz/CoverArt.njk", { coverArtUrl: question?.resources.find((entry) => entry.type === "cover")?.url }),
                 trinty.render("quiz/SolveStatus.njk", { solve_status: true, message: 'good job' })
             ].join();
-            return victoryHtml;
-
             // TODO: notify other players that someone answered correctly.
             //       ws.publish('fontaine', )
-
+            let publishHtml: string = "";
+            return {
+                clientHtml: victoryHtml,
+                publishHtml
+            };
         } else {
             const incorrectReponseHtml: string = trinty.render("quiz/SolveStatus.njk", { solve_status: false, message: 'no idiot' });
-            return incorrectReponseHtml;
+            return {
+                clientHtml: incorrectReponseHtml,
+                publishHtml: null
+            };;
         }
     }
 }

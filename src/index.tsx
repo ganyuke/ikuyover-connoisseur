@@ -142,10 +142,13 @@ waypoint.ws('/ws', {
             if (client) {
                 switch (message.operation) {
                     case "answer":
-                        if (message.answer) {
+                        if (client.currentRoom && message.answer) {
                             const html = wsHydrateAnswer(client, message.answer);
                             if (html) {
-                                return ws.send(html);
+                                ws.send(html.clientHtml);
+                                if (html.publishHtml) {
+                                    ws.publish(client.currentRoom, html.publishHtml);
+                                }
                             }
                         }
                         break;
